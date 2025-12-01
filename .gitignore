@@ -6,7 +6,8 @@ dist/
 wheels/
 *.egg-info
 
-# git에 올릴려면, 해당 API키 노출되면 안돼서 제외
-.env
 # Virtual environments
+# git에 올릴려면, 해당 API키 노출되면 안돼서 제외
 .venv
+.env
+
