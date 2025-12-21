@@ -7,7 +7,7 @@
 
 **[Nomad Coders AI Agents Masterclass](https://nomadcoders.co/ai-agents-masterclass/lobby)** 학습 기록 및 프로젝트 저장소입니다.
 
-단순한 LLM 호출을 넘어, 스스로 사고하고(Think), 도구를 사용하며(Act), 다른 에이전트와 협업하여 복잡한 과업을 수행하는 **Autonomous AI Agent**의 A to Z 구현 연습
+단순한 LLM 호출을 넘어, 스스로 사고하고(Think), 도구를 사용하며(Act), 다른 에이전트와 협업하여 복잡한 과업을 수행하는 **Autonomous AI Agent**의 A to Z 구현 내용 기록입니다.
 
 ---
 
@@ -86,3 +86,4 @@ Google의 Agent Development Kit를 활용하여 확장성 있는 에이전트 �
    ```bash
    git clone [https://github.com/tabjun/AI_agent.git](https://github.com/tabjun/AI_agent.git)
    cd AI_agent
+
