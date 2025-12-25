@@ -1,0 +1,10 @@
+[project]
+name = "part3-crewai-news-reader"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "crewai>=1.7.2",
+    "dotenv>=0.9.9",
+]
