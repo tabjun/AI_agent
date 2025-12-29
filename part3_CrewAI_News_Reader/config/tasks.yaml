@@ -3,11 +3,19 @@ translate_task:
     Translate {sentence} from English to Italian without making mistakes.
   expected_output: >
     A well formatted translation from English to Italian using proper capitalization of names and places.
-  agent: translator_agent
+  agent: English_to_italian_agent
 
 retranslate_task:
   description: >
     Translate {sentence} from Italian to Korean without making mistakes.
   expected_output: >
     A well formatted translation from Italian to Korean using proper capitalization of names and places.
-  agent: translator_agent
+  agent: Italian_to_korean_agent
+
+count_task:
+  description: >
+    Analyze the text provided in the **context** from the immediately preceding task.
+    Count the total number of letters in that text.
+  expected_output: >
+    The number of letters in a sentence.
+  agent: counter_agent
