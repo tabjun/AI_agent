@@ -1,0 +1,1 @@
+Could you please specify the topic you’d like covered in today’s Daily News Briefing, or provide the URLs from the previous curation task? Once I have that information, I will assemble a complete, publication-ready markdown news briefing as requested.
