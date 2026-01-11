@@ -55,4 +55,12 @@ class NewsReaderAgent:
             verbose=True,
         )
         
-NewsReaderAgent().crew().kickoff()
+# NewsReaderAgent().crew().kickoff()
+
+print("## 뉴스 요약 에이전트 시작 ##")
+topic_input = input("수집하고 싶은 뉴스 주제 입력(예: AI Trends): ")
+
+if not topic_input:
+    topic_input = "AI Technology and stock trend(about QQQ, Nasdaq, S&P500, SCHG)" # 기본으로
+
+NewsReaderAgent().crew().kickoff(inputs={"topic": topic_input})

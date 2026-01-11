@@ -94,6 +94,12 @@ summarization_task:
     Maintain journalistic tone, objectivity, and readability throughout all summary levels.
     Use metadata from the original articles to guide emphasis and level of detail.
 
+    For each article, provide:
+    1. **한줄 요약 (One-line Summary):** A provocative headline in Korean.
+    2. **핵심 내용 (Key Points):** 3 bullet points with facts and numbers.
+    3. **시장 영향 (Market Impact):** How this affects stock prices (Bullish/Bearish).
+    **Tone:** Professional financial analyst style.
+
   expected_output: >
     A structured markdown document containing multi-tier summaries with this format:
 
@@ -152,7 +158,12 @@ final_report_assembly_task:
 
     The final report should read like a premium news briefing from a major publication.
 
+    Assemble the final report based on the summaries.
+    The report must be written in **Korean (Hangul)**.
+    Translate any English content into natural, professional Korean.
+
   expected_output: >
+    A fully formatted markdown news report in Korean.
     A complete, publication-ready markdown document with this professional structure:
 
     # Daily News Briefing: {topic}
