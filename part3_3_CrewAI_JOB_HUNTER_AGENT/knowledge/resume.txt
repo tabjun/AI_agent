@@ -1,0 +1,99 @@
+# Yoon Tae-jun
+Data Analyst | Data Scientist
+
+[Contact Info]
+Email: wantdonelookforjob@gmail.com | Phone: +82 10-8858-0833
+Address: Gyeongsan, Gyeongbuk, South Korea
+GitHub: github.com/tabjun
+Portfolio: https://gravel-turnover-821.notion.site/13a6676605a980eebe87c1416e59e30f?source=copy_link
+
+---
+
+[Professional Summary]
+
+Goal-oriented Data Analyst with strong expertise in Python and R for end-to-end data solutions. Proven track record in academic research leading to patent applications and awards. Skilled in transforming complex data into actionable insights through statistical analysis and interactive visualizations. Committed to delivering user-centric solutions by focusing on clear analytical direction and problem-solving.
+
+---
+
+[Technical Skills]
+
+- Data Analysis & ML: Python (Pandas, Numpy, Statsmodels,Scikit-learn, Tensorflow), R (Dplyr, Caret, Ggplot2)
+- Visualization: Tableau
+- DB: MySQL (Query Optimization)
+- Tools & Environment: VS Code, Git/GitHub, Notion, MS Office (PowerPoint Advanced)
+
+---
+
+[Experience]
+
+Principal Investigator (Research Project)
+Daegu Technopark | Jun 2023 - Dec 2023
+
+- Led the 'Smart Healthcare Body Change Detection Process' development project.
+- Planned research topics and designed algorithms for early anomaly detection.
+- Managed project schedules, coordinated with partner companies, and authored final reports.
+- Achievements: Patent application (10-2023-0170761), Academic conference award, Application deployment.
+
+Operations Lead & Mentor
+Data Analysis Club 'Gol:D' (Keimyung Univ.)
+
+- Recruited members and managed club operations including alumni mentoring sessions.
+- Designed and taught a Python basics curriculum for new members (Published on Blog/GitHub).
+- Organized weekly study sessions (4 times/week) and project presentation events.
+
+Self-Directed Talent Scholar
+University Program | Apr 2022 - Dec 2022
+
+- Selected as the sole departmental scholar based on a 1-year self-directed learning proposal.
+- Successfully completed a focused end-to-end data analysis project, overcoming previous multitasking habits.
+
+---
+
+[Projects & Research]
+
+1. Medical AI & Service Development
+- [Yonsei Univ. Medical School] Renal Biopsy AI Model: Developed a diagnostic assistance model using clinical and image data.
+- [Kiu-so] Marbling Score Calculator: Implemented logic to calculate intramuscular fat using cattle genetic info for farmers.
+
+2. Data Competitions & Analysis
+- [Daegu Big Data Competition] Finalist: Analyzed 'Job Retention and Regional Migration Factors of Youth in Daegu'.
+- [Big Data Contest] Loan Prediction: Predicted customer loan eligibility using app usability data.
+- [Dacon/Kaggle] Various Projects: Titanic Survival Prediction, Power Consumption Forecasting, Airline Passenger Satisfaction.
+
+3. Academic Research (Korea Data Info Science Society)
+- 2023 Spring Conference Award: "Factors Affecting First Job Retention of College Graduates".
+- 2023 Autumn Conference Award: "Performance Comparison of Outlier Detection Algorithms".
+
+4. Academic Projects
+- Body Fat Analysis: Simulated and analyzed body fat percentage changes based on calorie intake.
+
+---
+
+[Education]
+
+Master's Degree | Keimyung University (Graduate School)
+Statistics | Mar 2023 - Aug 2024
+- GPA: 96.75 / 100
+- Coursework: Data Mining, Machine Learning, Statistical Analysis Methodologies.
+
+Bachelor's Degree | Keimyung University
+Statistics | Mar 2017 - Feb 2023
+- GPA: 3.45 / 4.5
+
+High School | Daegu Catholic Univ. Muhak High School
+Humanities | Mar 2014 - Feb 2017
+
+---
+
+[Certifications]
+
+- SAS Certified Specialist: Base Programming (2022, SAS Korea)
+- ADsP (Advanced Data Analytics Professional) (2022, Korea Data Agency)
+- Social Research Analyst, Level 2 (2021, HRD Korea)
+
+---
+
+[Languages]
+
+- Korean: Native
+- English: Professional Working Proficiency (TOEIC Speaking IM3 / 130)
