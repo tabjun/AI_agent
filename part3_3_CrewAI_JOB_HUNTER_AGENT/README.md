@@ -42,3 +42,48 @@ graph TD
     end
     
     F --> Final[📄 Interview Prep.md]
+
+# 🔄 AI Job Search Workflow: 데이터 연결 흐름도
+
+이 프로젝트의 핵심은 각 Task가 독립적으로 끝나는 것이 아니라, 
+앞 단계의 결과물(Output)을 뒷 단계의 입력물(Input)로 넘겨주는 '이어달리기' 구조라는 점입니다.
+
+---
+
+## 📊 한눈에 보는 연결 구조 (Pipeline Visualization)
+
+[1. 공고 검색] ➔ [2. 적합도 평가] ➔ [3. 최종 1픽 선정]
+                                         ⬇️
+                           (선정된 공고 데이터를 기준으로 분기)
+                                 ↙️               ↘️
+                 [4. 이력서 수정]               [5. 기업 분석]
+                                 ↘️               ↙️
+                           (모든 정보를 취합하여 최종 생성)
+                                         ⬇️
+                              [6. 면접 준비 가이드]
+
+---
+
+## 🔗 단계별 연결 상세 설명 (Connection Logic)
+
+### 1️⃣ Job Extraction (검색) ➔ Job Matching (평가)
+* **연결 고리:** `Job List` (전체 공고 목록)
+* **왜 연결하나요?:** 검색 에이전트가 인터넷에서 긁어온 '날것의 공고 리스트'를 넘겨줘야, 평가 에이전트가 내 이력서와 비교해서 점수를 매길 수 있습니다.
+
+### 2️⃣ Job Matching (평가) ➔ Job Selection (선정)
+* **연결 고리:** `Ranked Job List` (점수와 이유가 포함된 공고 목록)
+* **왜 연결하나요?:** 평가 에이전트가 1~5점 점수를 매겨놓은 성적표를 넘겨줘야, 선정 에이전트가 그중에서 "이게 베스트다!" 하고 딱 하나(Chosen Job)를 고를 수 있습니다.
+
+### 3️⃣ Job Selection (선정) ➔ Resume Rewrite & Company Research (분기점)
+* **연결 고리:** `Chosen Job` (최종 선정된 단 하나의 공고)
+* **왜 연결하나요?:** 여기가 가장 중요합니다. 타겟팅할 회사가 정해져야,
+    1.  이력서 수정 에이전트가 "그 회사 JD에 맞춰서" 이력서를 고칠 수 있고,
+    2.  기업 분석 에이전트가 "그 회사를" 조사할 수 있습니다.
+
+### 4️⃣ All Previous Outputs ➔ Interview Prep (종합)
+* **연결 고리:** `Chosen Job` + `Rewritten Resume` + `Company Research`
+* **왜 연결하나요?:** 마지막 면접 코치는 앞선 모든 결과물을 종합해야 합니다.
+    * "어떤 직무인가?" (Chosen Job)
+    * "내 수정된 이력서는 어떤가?" (Rewritten Resume)
+    * "회사는 어떤 곳인가?" (Company Research)
+    이 3가지를 다 알아야 완벽한 면접 예상 질문과 답변 전략을 짤 수 있기 때문입니다.
