@@ -8,6 +8,7 @@ job_extraction_task:
     3. Filter out job listings that are not {level} level {position} jobs in {location}.
   expected_output: >
     A JSON object matching the `JobList` schema.
+    The 'reason' field must be written in Korean. (선정 이유는 반드시 한국어로 작성)
   agent: job_search_agent
 
 job_matching_task:
@@ -67,6 +68,8 @@ resume_rewriting_task:
   expected_output: >
     A Markdown-formatted version of the **real user's resume**, rewritten and optimized for the selected job.
     The resume must remain truthful and grounded in the user's real history.
+    A Markdown-formatted version of the resume. 
+    (모든 내용은 한국어로 작성할 것. 기존 이력서의 사실관계를 유지하되, 자연스러운 한국어 표현을 사용할 것.)
 
   agent: resume_optimization_agent
   output_file: output/rewritten_resume.md
@@ -93,6 +96,8 @@ company_research_task:
     - ## Role Context and Product Involvement
     - ## Likely Interview Topics
     - ## Suggested Questions to Ask
+    A Markdown file with sections about Company, Values, News, etc.
+    (모든 내용은 한국어로 작성할 것.)
 
   agent: company_research_agent
   markdown: true
@@ -128,6 +133,27 @@ interview_prep_task:
     - ## Questions to Ask Them
     - ## Concepts To Know/Review
     - ## Strategic Advice
+    A Markdown document with interview questions and strategy.
+    (모든 내용은 한국어로 작성할 것.)
 
   agent: interview_prep_agent
   output_file: output/interview_prep.md
+
+report_task:
+  description: >
+    You are the "Process Auditor". Review the entire job hunting process performed by previous agents.
+    
+    1. **Process Summary**: Briefly explain what job was selected and why.
+    2. **Resume Change Log**: Compare the original resume (from knowledge) with the rewritten resume. 
+       - Explicitly list which parts were modified, added, or emphasized.
+       - Explain *why* those specific changes were made in relation to the selected job description.
+    3. **Strategy Review**: Summarize the company research and interview strategy.
+
+    Think of this as a "Debriefing Report" for the user.
+  expected_output: >
+    A Markdown document titled "Job Hunter Process Report".
+    All contents must be written in Korean (한국어로 작성).
+    It should clearly explain the "Before & After" of the resume and the logic behind the agents' decisions.
+
+  agent: interview_prep_agent
+  output_file: output/process_report.md

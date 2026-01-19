@@ -36,16 +36,19 @@ class JobList(BaseModel):
     jobs: List[Job]
 
 
+# 채택된 직무, 점수, 이유 작성
 class RankedJob(BaseModel):
     job: Job
     match_score: int
     reason: str
 
 
+# 순위가 매겨진 직무 목록
 class RankedJobList(BaseModel):
     ranked_jobs: List[RankedJob]
 
 
+# expected output: 선택된 직무, 이유
 class ChosenJob(BaseModel):
     job: Job
     selected: bool
