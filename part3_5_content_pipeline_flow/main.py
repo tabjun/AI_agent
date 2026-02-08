@@ -10,6 +10,13 @@ class ContentPipelineState(BaseModel):
     
     # Externals (내부 로직용 데이터)
     max_length: int = 0
+    score: int = 0
+    
+    # Content
+    blog_post: str  = ''
+    tweet: str = ''
+    linkedin_post: str = ''
+    
 
 class ContentPipelineFlow(Flow[ContentPipelineState]):
     
@@ -43,7 +50,7 @@ class ContentPipelineFlow(Flow[ContentPipelineState]):
     
     # [@router]: 리서치 결과를 바탕으로 '어느 팀(메서드)'으로 보낼지 결정하는 분기점
     @router(conduct_research)
-    def router(self):
+    def conduct_research_router(self):
         content_type = self.state.content_type
         print(f"3. Router Decision: {content_type}")
         
@@ -55,15 +62,21 @@ class ContentPipelineFlow(Flow[ContentPipelineState]):
             return 'make_linkedin_post'
     
     # --- 분기된 작업들 (Writer Agents) ---
-    @listen('make_blog')
+    @listen(or_('make_blog', 'remake_blog'))
     def handle_make_blog(self):
+        # if blog post has been made, show the old one to the ai and ask it to improve, else
+        # just ask to create.
         print('   -> Path A: Making blog post...')
 
-    @listen('make_tweet')
+    @listen(or_('make_tweet', 'remake_tweet'))
+        # if tweet has been made, show the old one to the ai and ask it to improve, else
+        # just ask to create.
     def handle_make_tweet(self):
         print('   -> Path B: Making tweet...')
 
-    @listen('make_linkedin_post')
+    @listen(or_('make_linkedin_post', 'remake_linkedin'))
+        # if post has been made, show the old one to the ai and ask it to improve, else
+        # just ask to create.
     def handle_make_linkedin_post(self):
         print('   -> Path C: Making linkedin post...')
         
@@ -82,8 +95,26 @@ class ContentPipelineFlow(Flow[ContentPipelineState]):
     def check_virality(self):
         print('5-B. Checking virality...')
         
+    @router(or_(check_seo, check_virality)) # type: ignore
+    # score에 따라서 post를 다시 만들거나 tweet 다시 만들기
+    def score_router(self):
+        
+        # content_type 추출
+        content_type = self.state.content_type
+        score = self.state.score
+        
+        if score >= 8:
+            return 'check_passed'
+        else:
+            if content_type == 'blog':
+                return 'remake_blog'
+            elif content_type == 'linkedin':
+                return 'remake_linkedin'
+            else:
+                return 'remake_tweet'
+        
     # [최종 단계]: SEO 검사나 화제성 체크 중 하나라도 끝나면 실행
-    @listen(or_(check_virality, check_seo))
+    @listen(or_('check_passed'))
     def finalize_content(self):
         print('6. Finalizing content: Ready to publish!')
 
@@ -91,7 +122,7 @@ class ContentPipelineFlow(Flow[ContentPipelineState]):
 flow = ContentPipelineFlow()
 
 # ContentPipelineState 초기 설정 입력
-# kickoff 함수가 이 딕셔너리를 받아서 자동으로 self.state(Pydantic 객체)로 변환해줌!
+# kickoff 함수가 이 딕셔너리를 받아서 자동으로 self.state(Pydantic 객체)로 변환해줌
 flow.kickoff(inputs={
     "content_type": "tweet",
     "topic": "AI Dog Training"
@@ -99,4 +130,4 @@ flow.kickoff(inputs={
 
 # 시각화 (선택사항)
 # crewai flow 흐름도 html로 보여줌
-flow.plot()
+# flow.plot()
