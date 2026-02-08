@@ -11,14 +11,48 @@
 ---
 
 
+## 🏗️ Detailed Flow Architecture
+
+```mermaid
 graph TD
-    Start([🚀 Start]) --&gt; Research[리서치]
-    Research --&gt; Make[콘텐츠 작성]
-    Make --&gt; Check[품질/SEO 검사]
-    Check --&gt; Score{점수 &gt;= 8?}
-    
-    Score -- &quot;No (재작업)&quot; --&gt; Make
-    Score -- &quot;Yes (통과)&quot; --&gt; Final([✅ 배포])
-    
-    style Score fill:#ff9,stroke:#333,stroke-width:2px
-    style Make fill:#bbf,stroke:#333
+    %% 노드 정의: 텍스트에 공백이나 특수문자가 있으면 반드시 따옴표로 감싸야 합니다.
+    Start([🚀 "Start"])
+    Init["🛠️ 초기 설정 및 검증"]
+    Research["🕵️‍♂️ 리서치 수행"]
+    TypeRouter{"◇ 콘텐츠 타입 결정"}
+
+    MakeBlog["✍️ 블로그 작성/수정"]
+    MakeTweet["🐦 트윗 작성/수정"]
+    MakeLinkedIn["💼 링크드인 작성/수정"]
+
+    CheckSEO["🔍 SEO 품질 검사"]
+    CheckViral["🔥 화제성 검사"]
+
+    ScoreRouter{"◇ 점수 >= 8?"}
+    Final([✅ "최종 완성"])
+
+    %% 흐름 연결
+    Start --> Init --> Research --> TypeRouter
+
+    %% 분기 (Router Decision)
+    TypeRouter -- "Blog" --> MakeBlog
+    TypeRouter -- "Tweet" --> MakeTweet
+    TypeRouter -- "LinkedIn" --> MakeLinkedIn
+
+    %% 검수 단계
+    MakeBlog --> CheckSEO
+    MakeTweet --> CheckViral
+    MakeLinkedIn --> CheckViral
+
+    %% 품질 평가 및 루프 (Refinement Loop)
+    CheckSEO --> ScoreRouter
+    CheckViral --> ScoreRouter
+
+    %% 점수 미달 시 재작성 경로로 회귀 (or_ 조건 활용)
+    ScoreRouter -- "No (재작업 필요)" -.-> MakeBlog
+    ScoreRouter -- "No (재작업 필요)" -.-> MakeTweet
+    ScoreRouter -- "No (재작업 필요)" -.-> MakeLinkedIn
+
+    %% 최종 통과
+    ScoreRouter -- "Yes (합격)" --> Final
+```
