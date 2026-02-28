@@ -1,7 +1,7 @@
 import os, re
 
 from crewai.tools import tool
-from firecrawl import FirecrawlApp, ScrapeOptions
+from firecrawl import FirecrawlApp
 
 # 웹 검색 도구 만들기
 # Firecrawl API로 search endpoint를 사용해서 일자리 검색
@@ -22,17 +22,11 @@ def web_search_tool(query: str): # 쿼리 받아서 결과 생성하는 도구
     response = app.search(
         query=query,
         limit=5, # 결과 받을 개수
-        scrape_options=ScrapeOptions(
-            formats=['markdown'],
-        ),
+        scrape_options= {
+            'formats': ['markdown']}
+        )
         
-    )
-    
-    # 이 작업을 해야 LLM 결과 출력이 쓸데없는 걸 다 출력하지 않게 할 수 있음
-    # 다 출력되면 불필요한 정보 가져오는데도 토큰 사용함
-    if not response.success:
-        return 'Error using tool.'
-    
+        
     cleaned_chunks = []
     
     # 마크다운 정리
