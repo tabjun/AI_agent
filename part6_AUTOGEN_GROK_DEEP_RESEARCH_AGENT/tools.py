@@ -1,6 +1,6 @@
 import os, re
 import datetime
-from firecrawl import FirecrawlApp # ScrapeOptions 임포트 삭제!
+from firecrawl import FirecrawlApp
 
 def web_search_tool(query: str):
     """
@@ -16,23 +16,38 @@ def web_search_tool(query: str):
     response = app.search(
         query=query,
         limit=2,
-        # 🟢 수정됨: ScrapeOptions 객체 대신 심플한 딕셔너리 사용
         scrape_options={
             "formats": ["markdown"]
         }
     )
 
-    # 🟢 수정됨: if not response.success: 부분은 최신 버전에서 에러가 나므로 아예 삭제했습니다.
-
     cleaned_chunks = []
 
-    for result in response.data:
+    # 수정됨: response.data 대신 response.web 사용
+    # 최신 버전의 Firecrawl은 검색 결과를 web, news, images 등의 출처별로 나누어 반환합니다.
+    for result in response.web:
+        
+        # 수정됨: 최신 SDK는 딕셔너리 대신 Pydantic 객체를 반환하므로, 
+        # 안전하게 딕셔너리로 변환한 후 데이터를 추출합니다.
+        if hasattr(result, "model_dump"):
+            res_dict = result.model_dump()
+        elif isinstance(result, dict):
+            res_dict = result
+        else:
+            res_dict = vars(result)
 
-        title = result["title"]
-        url = result["url"]
-        markdown = result["markdown"]
+        title = res_dict.get("title", "")
+        url = res_dict.get("url", "")
+        markdown = res_dict.get("markdown", "")
 
-        cleaned = re.sub(r"\\+|\n+", "", markdown).strip()
+        # 스크래핑 결과가 비어있을 경우를 대비한 안전장치
+        if not markdown:
+            markdown = res_dict.get("description", "")
+            
+        if not markdown:
+            continue
+
+        cleaned = re.sub(r"\\+|\n+", "", str(markdown)).strip()
         cleaned = re.sub(r"\[[^\]]+\]\([^\)]+\)|https?://[^\s]+", "", cleaned)
 
         cleaned_result = {
