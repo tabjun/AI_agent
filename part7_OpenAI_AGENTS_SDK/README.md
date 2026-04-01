@@ -66,15 +66,15 @@ Dummy agent를 만들 때 `Runner`를 사용하는 핵심 이유는, 단순히 "
 
 ```mermaid
 flowchart TD
-    A[시작: Runner.run(agent, user_input)] --> B[대화 컨텍스트 구성\n(agent instructions + history + input)]
-    B --> C[OpenAI 모델 호출]
-    C --> D[모델 응답 파싱]
-    D --> E{Tool 호출 필요?}
-    E -- 예 --> F[해당 Tool 실행]
-    F --> G[Tool 결과를 대화 컨텍스트에 추가]
+    A["시작: Runner.run(agent, user_input)"] --> B["대화 컨텍스트 구성<br/>(agent instructions + history + input)"]
+    B --> C["OpenAI 모델 호출"]
+    C --> D["모델 응답 파싱"]
+    D --> E{"Tool 호출 필요?"}
+    E -- 예 --> F["해당 Tool 실행"]
+    F --> G["Tool 결과를 대화 컨텍스트에 추가"]
     G --> C
-    E -- 아니오 --> H[최종 응답(final response) 확정]
-    H --> I[Runner가 결과 반환]
+    E -- 아니오 --> H["최종 응답(final response) 확정"]
+    H --> I["Runner가 결과 반환"]
 ```
 
 ### Runner 실행 시퀀스 (Sequence)
@@ -140,13 +140,13 @@ result = await Runner.run(agent, "Hello how are you?")
 - 도구가 많아질수록 `Runner`의 가치가 커짐
 - 실무에서는 직접 루프를 구현하기보다 `Runner`로 표준화하는 것이 안정적
 
-## 📘 오늘 강의 마무리 노트
+## 📘 2026.04.01(수) 강의 마무리 노트
 
-오늘은 OpenAI Agents SDK의 가장 기초이자 핵심인 **Agent + Runner + Tool 연결 흐름**을 학습했습니다.
+2026.04.01(수)은 OpenAI Agents SDK의 가장 기초이자 핵심인 **Agent + Runner + Tool 연결 흐름**을 학습했습니다.
 
-우리가 작성한 dummy agent 코드는 "에이전트를 정의하고 호출하면 내부에서 어떤 일이 일어나는지"를 눈으로 확인하기 위한 최소 예제입니다.
+dummy agent 코드는 "에이전트를 정의하고 호출하면 내부에서 어떤 일이 일어나는지"를 눈으로 확인하기 위한 최소 예제입니다.
 
-### 오늘 실습 코드의 의미
+### 2026.04.01(수) 실습 코드의 의미
 
 ```python
 from agents import Agent, Runner, function_tool
@@ -180,15 +180,9 @@ stream = Runner.run_streamed(
 - `tool_call_output_item`: 실제 tool 함수가 실행되고 결과값이 반환된 단계
 - `message_output_item`: tool 결과까지 반영해 에이전트가 사용자에게 최종 메시지를 생성한 단계
 
-즉, 우리가 적어둔 주석 설명은 단순 추측이 아니라, 스트리밍 이벤트 로그로 검증된 실행 순서입니다.
+즉, 적어둔 주석 설명은 단순 추측이 아니라, 스트리밍 이벤트 로그로 검증된 실행 순서입니다.
 
 ### 2026.04.01(수) 학습 한 줄 정리
 
 "Agent를 호출해서 사용한다"는 말의 실제 의미는,
 **Runner가 에이전트 실행 전 과정을 반복 오케스트레이션하면서 최종 답을 완성해 주는 흐름**이라는 것입니다.
-
-### 커밋 메시지에 써도 좋은 마무리 문구
-
-이번 파트에서는 dummy agent를 통해 Agents SDK의 기본 실행 구조를 이해했다.
-Runner는 모델 호출 1회 도구가 아니라, tool 호출/결과 반영/재요청을 포함한 전체 루프를 관리한다.
-`run_streamed` 이벤트(`tool_call_item` → `tool_call_output_item` → `message_output_item`)를 통해 에이전트 내부 동작을 직접 확인했다.
