@@ -1,6 +1,7 @@
 # 🤖 AI Job Search & Career Coach (CrewAI)
 
-> **"나만의 AI 헤드헌터 & 커리어 코치 팀"** > 사용자의 이력서와 희망 조건을 기반으로 **채용 공고 검색, 적합도 분석, 이력서 첨삭, 기업 분석, 면접 준비**까지의 전 과정을 자동화하는 Multi-Agent 시스템입니다.
+> **"나만의 AI 헤드헌터 & 커리어 코치 팀"**
+> 사용자의 이력서와 희망 조건을 기반으로 **채용 공고 검색, 적합도 분석, 이력서 첨삭, 기업 분석, 면접 준비**까지의 전 과정을 자동화하는 Multi-Agent 시스템입니다.
 
 ---
 
@@ -24,24 +25,25 @@
 
 ```mermaid
 graph TD
-    User((User Input)) --> A
+    User(("User Input")) --> A
     
     subgraph "Phase 1: Discovery"
-    A[🔍 Job Search Agent] -->|Raw Job List| B[⚖️ Job Matching Agent]
-    B -->|Ranked Jobs| C[✅ Job Selection Task]
+    A["🔍 Job Search Agent"] -->|Raw Job List| B["⚖️ Job Matching Agent"]
+    B -->|Ranked Jobs| C["✅ Job Selection Task"]
     end
     
     subgraph "Phase 2: Strategy"
-    C -->|Selected Job| D[📝 Resume Optimization Agent]
-    C -->|Selected Job| E[🏢 Company Research Agent]
+    C -->|Selected Job| D["📝 Resume Optimization Agent"]
+    C -->|Selected Job| E["🏢 Company Research Agent"]
     end
     
     subgraph "Phase 3: Preparation"
-    D -->|Rewritten Resume| F[🎤 Interview Prep Agent]
+    D -->|Rewritten Resume| F["🎤 Interview Prep Agent"]
     E -->|Company Report| F
     end
     
-    F --> Final[📄 Interview Prep.md]
+    F --> Final["📄 Interview Prep.md"]
+```
 
 # 🔄 AI Job Search Workflow: 데이터 연결 흐름도
 
