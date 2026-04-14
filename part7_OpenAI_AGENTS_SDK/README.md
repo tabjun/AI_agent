@@ -186,3 +186,84 @@ stream = Runner.run_streamed(
 
 "Agent를 호출해서 사용한다"는 말의 실제 의미는,
 **Runner가 에이전트 실행 전 과정을 반복 오케스트레이션하면서 최종 답을 완성해 주는 흐름**이라는 것입니다.
+
+## 2026.04.14 학습 내용: 에이전트 Handoff 라우팅 흐름 변화 및 출력 제어 (output_type)
+
+최근 OpenAI Agents SDK의 업데이트에 따라 다중 에이전트(Multi-Agent) 간의 제어권 전환(Handoff) 흐름이 변경되었습니다. 이에 맞춰 Pydantic 기반의 구조화된 응답(Answer 타입 등)을 얻기 위한 `output_type` 파라미터의 선언 위치도 명확히 조정해야 합니다.
+
+### 1. 변경된 Handoff 실행 흐름
+과거에는 서브 에이전트로 제어권이 넘어가면 해당 에이전트가 바로 사용자에게 최종 응답을 반환할 수 있었습니다. 하지만 현재 SDK 구조에서는 서브 에이전트의 작업 결과가 반드시 다시 메인 에이전트로 회귀하여 최종 래핑(Wrapping)을 거친 후 출력됩니다.
+
+[작동 흐름도]
+1. Main Agent가 사용자 요청 수신 및 의도 분석
+2. 적합한 서브 에이전트(예: Weather Agent)로 제어권 전환(Handoff)
+3. 서브 에이전트가 Task 수행 및 결과 생성
+4. 생성된 결과를 다시 Main Agent로 반환 (핵심 변경점)
+5. Main Agent가 최종 텍스트 또는 구조화된 객체로 래핑하여 사용자에게 반환
+
+### 2. output_type 적용 위치 수정
+위와 같은 사이클 변화로 인해, 최종적으로 사용자에게 결괏값을 리턴하는 주체는 서브 에이전트가 아닌 **Main Agent**가 되었습니다. 
+
+따라서 지정한 `Answer` 모델 타입대로 출력이 나오지 않는다면, 각각의 개별 전문가 에이전트가 아니라 관문 역할을 하는 `main_agent` 내부에 `output_type=Answer`를 할당해야만 의도한 포맷의 결과물을 얻을 수 있습니다.
+
+[코드 적용 예시]
+```python
+from agents import Agent
+
+# Answer 클래스가 Pydantic BaseModel로 사전 정의되어 있다고 가정
+
+main_agent = Agent(
+    name="Main Agent",
+    instructions="You are a user facing agent. Transfer to the agent most capable of answering the user's question.",
+    handoffs=[geography_agent, economics_agent], # 라우팅 대상 서브 에이전트 목록 전달
+    output_type=Answer, # 최종 결과를 래핑하여 리턴하는 주체가 Main Agent이므로 여기에 타입 명시
+)
+
+## 2026.04.14 학습 내용: draw_graph를 활용한 에이전트 흐름도 시각화
+
+`agents.extensions.visualization`에서 제공하는 `draw_graph` 함수를 통해, 에이전트 구조(handoff 연결 및 tool 호출 관계)를 그래프 이미지로 시각화할 수 있습니다.
+
+### 1. draw_graph 사용법
+
+```python
+from agents.extensions.visualization import draw_graph
+
+draw_graph(main_agent)
+```
+
+`main_agent`를 기준으로 연결된 handoff 에이전트와 tool들을 자동으로 순회하며 방향 그래프를 생성합니다.  
+Jupyter 환경에서는 인라인 이미지로 바로 출력되므로 복잡한 멀티 에이전트 구조를 빠르게 파악하는 데 유용합니다.
+
+### 2. 환경 설정
+
+`draw_graph`는 내부적으로 Graphviz를 의존합니다. 두 가지 설치가 모두 필요합니다.
+
+**Python 패키지 설치 (uv 사용)**
+```bash
+uv add graphviz
+```
+
+**시스템 Graphviz 설치 (Windows 기준)**  
+[https://graphviz.org/download/](https://graphviz.org/download/) 에서 설치 후, 설치 경로를 시스템 환경변수 `PATH`에 추가해야 합니다.  
+(예: `C:\Program Files\Graphviz\bin`)
+
+> Python 패키지만 설치하고 시스템 Graphviz가 없으면 실행 시 오류가 발생합니다.
+
+### 3. Pydantic output_type과 draw_graph의 조합
+
+draw_graph로 구조를 시각적으로 먼저 파악한 다음, 최종 응답이 흘러나오는 경로를 보면  
+**마지막에 결과를 내보내는 에이전트가 어디인지** 확인할 수 있습니다.
+
+최신 SDK 흐름에서 서브 에이전트는 결과를 Main Agent에게 돌려주므로, `output_type`은 반드시 **Main Agent**에 선언해야 합니다.
+
+```
+Main Agent
+    ↓ handoff
+Weather Agent (작업 수행)
+    ↓ 결과 반환
+Main Agent (최종 래핑 → output_type 적용)
+    ↓
+사용자에게 Answer 타입으로 반환
+```
+
+draw_graph를 통해 이 흐름을 눈으로 확인하고, `output_type` 선언 위치가 적절한지 검증하는 조합이 효과적입니다.

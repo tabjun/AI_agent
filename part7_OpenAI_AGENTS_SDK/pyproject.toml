@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "black>=26.3.1",
+    "graphviz>=0.21",
     "openai>=2.26.0",
     "openai-agents>=0.2.6",
     "python-dotenv>=1.1.1",
