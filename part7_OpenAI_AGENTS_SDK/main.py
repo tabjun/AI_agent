@@ -54,3 +54,44 @@ with st.chat_message('human'):
 st.chat_input('write your message for assistant.', 
               accept_file=True # 파일 첨부 가능
               )
+
+#%%
+# 강의 2. 위젯 실행 예제
+import streamlit as st
+
+def setup_application():
+    print('fetch an api.....')
+
+# 이 함수 실행시켜주면서 rerun된다고 알려주는 역할
+setup_application()
+
+# rerun되면서 이전 답변 기억력 가지게 하려면 세션 상태 활용(함수: st.session_state)
+'''
+   1. 커스텀 저장소: is_admin은 사용자가 자유롭게 정한 '사물함 이름(Key)'일 뿐입니다. user_level, chat_history 등 어떤 이름으로든 만드실 수 있습니다.
+   2. 데이터의 생존: 원래 파이썬 프로그램은 종료되면 변수가 사라지지만, st.session_state 안에 넣어둔 데이터는 브라우저 탭을 닫기 전까지 Rerun이라는 파도를 견디고 살아남습니다.
+   3. 흐름 요약:
+       * 최초 실행: is_admin 없음 → False로 생성.
+       * 이름 입력: is_admin = True로 수정 → 페이지 자동 Rerun 시작.
+       * 다시 실행: if 'is_admin' not in... 체크 → "이미 있는데?" 하고 통과(값 유지) → is_admin은 여전히 True.
+'''
+
+if 'is_admin' not in st.session_state:
+    st.session_state['is_admin'] = False
+
+st.header('hello')
+
+# 질문과 빈칸이 있는 입력창 생성
+name = st.text_input('what is your name?')
+
+# 내가 쓴 답이 message에 저장됨
+# 근데 구현된 ui에서 답변을 입력하면 차례대로 입력되는 답변을 저장했다가 출력하는게 아니라
+# rerun으로 이전 응답이 사리지고 새로 업데이트 되는 것
+# 빈칸에 답변 입력안하면 출력안됨
+if name:
+    st.write(f'hello {name}')
+    st.session_state['is_admin'] = True
+ 
+    
+print(st.session_state['is_admin'])
+
+
