@@ -279,9 +279,9 @@ draw_graph를 통해 이 흐름을 눈으로 확인하고, `output_type` 선언 
 *(주의: 레포지토리 Settings에서 Pages 설정을 완료해야 링크가 활성화됩니다.)*
 
 ### 2. UI Screenshot
-캡처한 이미지는 아래에서 확인할 수 있습니다. (이미지 저장 후 커밋 필요)
+캡처한 이미지는 아래에서 확인할 수 있습니다.
 
-![UI Screenshot](./example_image/ui_screenshot.png)
+![UI Screenshot](./example_image/ui_example.png)
 
 ---
 ## 🚀 GitHub Pages 설정 방법 (필수)
