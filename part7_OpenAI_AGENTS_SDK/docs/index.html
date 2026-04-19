@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <title>Streamlit UI Preview</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.62.1/build/stlite.css"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.62.1/build/stlite.js"></script>
+    <script>
+      stlite.mount(
+        {
+          requirements: ["streamlit"], // 필요한 패키지 추가
+          entrypoint: "main.py",
+          files: {
+            "main.py": `
+import streamlit as st
+
+st.write('2026.04.19 streamlit api 활용 ui 생성 실습')
+
+st.button('click me' )
+
+st.text_input(
+    'write your api key',
+    max_chars=20,) 
+
+st.feedback('faces')
+
+with st.sidebar:
+    st.badge('새 채팅')
+with st.sidebar:
+    st.badge('AI_AGENT STUDY')
+with st.sidebar:
+    st.badge('퇴근이 최고')
+
+tab1, tab2, tab3 = st.tabs(['Agent', 'Chat', 'Output'])
+
+with tab1:
+    st.header('Agent1')
+with tab2:
+    st.header('Agent2')
+with tab3:
+    st.header('Agent3')
+    
+with st.chat_message('ai'):
+    st.text('hello!')
+    st.text('Agent is using tool to search information for you.') 
+    
+with st.chat_message('human'):
+    st.text('hi!')
+
+st.chat_input('write your message for assistant.', 
+              accept_file=True
+              )
+`,
+          },
+        },
+        document.getElementById("root")
+      );
+    </script>
+  </body>
+</html>
