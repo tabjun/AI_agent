@@ -57,7 +57,7 @@ graph TD
 
 ```mermaid
 graph TD
-    UserQ([질문: "LangGraph가 뭐야?"]) --> Search[search_knowledge_base<br/>DB에서 정보 탐색]
+    UserQ(["질문: LangGraph가 뭐야?"]) --> Search[search_knowledge_base<br/>DB에서 정보 탐색]
     Search --> Summary[create_summary_report<br/>수집된 정보 요약]
     Summary --> Result([전문가 리포트 출력])
 
