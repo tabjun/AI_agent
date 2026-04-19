@@ -273,22 +273,7 @@ draw_graph를 통해 이 흐름을 눈으로 확인하고, `output_type` 선언 
 
 ## 🖥️ UI Preview
 
-### 1. 실시간 실행 화면 (GitHub Pages)
-아래 링크를 통해 별도의 설치 없이 브라우저에서 UI를 바로 확인할 수 있습니다.
-- **[실시간 UI 확인하기 (GitHub Pages 클릭)](#)** 
-*(주의: 레포지토리 Settings에서 Pages 설정을 완료해야 링크가 활성화됩니다.)*
-
-### 2. UI Screenshot
+### 1. UI Screenshot
 캡처한 이미지는 아래에서 확인할 수 있습니다.
 
 ![UI Screenshot](./example_image/ui_example.png)
-
----
-## 🚀 GitHub Pages 설정 방법 (필수)
-1. GitHub 레포지토리 페이지로 이동합니다.
-2. **Settings** 메뉴를 클릭합니다.
-3. 왼쪽 사이드바에서 **Pages**를 선택합니다.
-4. **Build and deployment > Branch** 섹션에서:
-   - Branch를 `main`으로 선택
-   - 폴더를 `/(root)`가 아닌 `/docs`로 변경합니다.
-5. **Save** 버튼을 누르고 약 1~2분 뒤 상단에 표시되는 URL로 접속합니다.
