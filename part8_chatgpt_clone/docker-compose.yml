@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  web:
+    build: .
+    container_name: chat-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_RUN_ON_SAVE=true
+    restart: always

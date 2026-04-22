@@ -9,7 +9,7 @@ env/
 .env
 *.ini
 *.key
-
+*.db*
 # 파이썬 캐시 무시
 __pycache__/
 *.pyc

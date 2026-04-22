@@ -1,96 +1,119 @@
 import asyncio
 import streamlit as st
-from agents import Agent, Runner, SQLiteSession
+from agents import Agent, Runner, SQLiteSession, WebSearchTool
+import time
 import dotenv
+import base64
+from io import BytesIO
+
 dotenv.load_dotenv()
 
+# 에이전트 초기화
 if 'agent' not in st.session_state:
     st.session_state['agent'] = Agent(
         name='ChatGpt Clone',
-        instructions = """
-        You are a helpful assistant that can remember previous conversations and use that information to provide better responses. You can also use the following tools to help you answer questions:
-        """
+        instructions="""
+        You are a helpful assistant that can process both text and images.
+        When an image is provided, analyze it carefully and answer user's questions about it.
+        You can also use the following tools:
+        1. Web Search Tool: Use this for information outside your training data.
+        """,
+        tools=[WebSearchTool()]
     )
-    
-# 조건문 안에 넣으면 agent가 session_state에 없을 때만 선언되고
-# undefined가 되기 때문에 바깥에 선언하는 것
+
 agent = st.session_state['agent']
 
-# rerun할때마다 세션이 초기화되는 것을 방지하기 위해 세션 상태에 저장
+# 세션 초기화
 if 'session' not in st.session_state:
     st.session_state['session'] = SQLiteSession('chat-history', 'chat-gpt-clone-memory.db')
-    
+
 session = st.session_state['session']
 
+def img_to_base64(image_file):
+    return base64.b64encode(image_file.getvalue()).decode()
 
-## 위는 로직, 아래는 UI
-# 대화 기록 보여주는 부분
 async def display_chat_history():
     messages = await session.get_items()
     for message in messages:
-        # 모두 role 가지고 있음. user = human, assistant = ai
-        # 사이드바에 저장된 메세지를 화면에 불러와서 보여주게 하기 위해
-        # with 구문으로 role의 메세지 불러오게 설정
-        # dictonary 형태라서 message['role']로 불러와야 함
-        # role이 'assistant'인 경우 Streamlit은 자동으로 AI 아이콘을 보여줍니다.
-        with st.chat_message(message['role']):
-            if message['role'] == 'user':
-                st.markdown(message['content'])
-            else:
-                # Assistant 메세지 처리 (openai-agents 저장 구조 대응)
-                if 'content' in message:
-                    if isinstance(message['content'], list) and len(message['content']) > 0:
-                        content_text = message['content'][0].get('text', '')
-                        st.markdown(content_text)
-                    elif isinstance(message['content'], str):
-                        st.markdown(message['content'])
+        if 'role' in message and 'content' in message:
+            with st.chat_message(message['role']):
+                if isinstance(message['content'], list):
+                    for item in message['content']:
+                        if 'text' in item:
+                            st.markdown(item['text'])
+                        if 'image_url' in item:
+                            st.image(item['image_url']['url'])
+                else:
+                    st.markdown(message['content'])
+        
+        if 'type' in message and message['type'] == 'web_search_call':
+            with st.chat_message('assistant'):
+                st.markdown('🔎 searched the web.....')
 
-# 메세지 출력을 prompt 입력보다 먼저 실행하여 대화 흐름 유지
-asyncio.run(display_chat_history())
+def update_status(status_container, event):
+    status_messages = {
+        'response.web_search_call.completed': ('✅ Web search complete!', 'complete'),
+        'response.web_search_call.in_progress': ('⏳ Starting web search...', 'running'),
+        'response.web_search_call.searching': ('🔍 Searching the web...', 'running'),
+        'response.completed': ('✅ Done', 'complete'),
+    }
+    if event in status_messages:
+        label, state = status_messages[event]
+        status_container.update(label=label, state=state)
 
-# assistant 응답 부분 꾸미기
-async def run_agent(user_prompt):
-    with st.chat_message('ai'):
+async def run_agent(user_input, image_file=None):
+    with st.chat_message('assistant'):
+        status_container = st.status('⏳ Processing...', expanded=False)
         text_placeholder = st.empty()
         full_response = ''
+        
+        # 멀티모달 입력 구성
+        content = [{"type": "text", "text": user_input}]
+        if image_file:
+            b64_image = img_to_base64(image_file)
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"}
+            })
 
         stream = Runner.run_streamed(
             agent,
-            user_prompt,
+            content,
             session=session
         )
 
         async for event in stream.stream_events():
             if event.type == 'raw_response_event':
+                update_status(status_container, event.data.type)
                 if event.data.type == 'response.output_text.delta':
-                    # 속성 이름을 delta로 확인 (또는 text가 맞는지 확인 필요)
-                    # 안전하게 hasattr 또는 getattr 사용 가능
                     delta = getattr(event.data, 'delta', None)
                     if delta:
                         full_response += delta
                         text_placeholder.markdown(full_response)
 
+# UI 구성
+st.title("ChatGPT Clone (Vision Supported)")
+
+# 대화 기록 표시
+asyncio.run(display_chat_history())
+
+# 이미지 업로더 추가
+uploaded_file = st.sidebar.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+if uploaded_file:
+    st.sidebar.image(uploaded_file, caption="Uploaded Image Preview", use_container_width=True)
 
 prompt = st.chat_input('Write a message for your assistant')
 
 if prompt:
-    # 사용자 메세지 즉시 표시
-    with st.chat_message('human'):
+    with st.chat_message('user'):
         st.markdown(prompt)
+        if uploaded_file:
+            st.image(uploaded_file, width=300)
 
-    # AI 응답 생성 및 표시
-    asyncio.run(run_agent(prompt))
+    asyncio.run(run_agent(prompt, uploaded_file))
 
-        
-# 여기서 중요한건 if prompt 구문에서 run_agent를 사용하지만, st.chat_message('ai'): 구문과 함께
-# run_agent 함수는 ai로 chat_message를 생성하는데, st.chat_message('ai'): 구문에 적용 불가함.
-# chat_message('human')안에 chat_message('ai') 생성 불가
-# 그래서 asyncio.run(run_agent(prompt)) 코드를 if 구문 밖에 넣어야 함
-
-
-# 사이드바가 밑에 있어야, prompt가 입력되고 나서 사이드바가 보여짐
 with st.sidebar:
-    reset = st.button('reset memory')
-    if reset:
+    st.divider()
+    if st.button('reset memory'):
         asyncio.run(session.clear_session())
-    st.write(asyncio.run(session.get_items()))
+        st.rerun()
