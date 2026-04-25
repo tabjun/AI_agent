@@ -1,6 +1,6 @@
 import asyncio
 import streamlit as st
-from agents import Agent, Runner, SQLiteSession, WebSearchTool, FileSearchTool
+from agents import Agent, Runner, SQLiteSession, WebSearchTool, FileSearchTool, ImageGenerationTool
 import dotenv
 dotenv.load_dotenv()
 import base64
@@ -25,7 +25,18 @@ if 'agent' not in st.session_state:
                FileSearchTool(
                    vector_store_ids=[VECTOR_STORE_ID],
                    max_num_results=5
-               )]
+               ),
+               ImageGenerationTool(
+                   tool_config={
+                       'type': 'image_generation',
+                       'quality': 'auto',
+                       'output_format': 'jpeg',
+                       'moderation': 'low',
+                       # 이미지 그려지면서 중간에 보여주는거
+                       'partial_images': 1
+                    },
+               )
+               ]
     )
 
 agent = st.session_state['agent']
@@ -50,21 +61,29 @@ async def display_chat_history():
                         if not isinstance(item, dict):
                             continue
                         if item.get('type') == 'input_text':
-                            st.markdown(item['text'])
-                        elif item.get('type') == 'text':
-                            st.markdown(item['text'])
+                            st.markdown(item.get('text', ''))
+                        elif item.get('type') in ('text', 'output_text'):
+                            st.markdown(item.get('text', ''))
                         elif item.get('type') == 'input_image':
                             st.image(item['image_url'])
                 else:
                     st.markdown(message['content'].replace('$', '\\$'))
 
         if 'type' in message:
-            if message['type'] == 'web_search_call':
+            # 생성한 이미지, 새로고침 후에도 저장돼서 계속 노출되게
+            message_type = message['type']
+            if message_type == 'web_search_call':
                 with st.chat_message('assistant'):
                     st.markdown('🔎 searched the web.....')
-            elif message['type'] == 'file_search_call':
+            elif message_type == 'file_search_call':
                 with st.chat_message('assistant'):
                     st.markdown('📄 searched the files.....')
+            elif message_type == 'image_generation_call':
+                # 이미지 생성 후 로그보면 result에 base64로 인코딩된 이미지 데이터가 저장되어 있음. 이걸 디코딩해서 보여주기
+                image = base64.b64decode(message['result'])
+                with st.chat_message('assistant'):
+                    st.image(image)
+                    st.markdown('🎨 generated an image.....')
 
 
 def update_status(status_container, event):
@@ -76,6 +95,9 @@ def update_status(status_container, event):
         'response.file_search_call.in_progress': ('📄 Starting file search...', 'running'),
         'response.file_search_call.searching': ('📄 Searching files...', 'running'),
         'response.completed': ('✅ Done', 'complete'),
+        'response.image_generation_call.generating': ('🎨 start generating image...', 'running'),
+        'response.image_generation_call.in_progress': ('🎨 Generating image...', 'running'),
+        'response.image_generation_call.completed': ('✅ Image generation complete!', 'complete'),
     }
     if event in status_messages:
         label, state = status_messages[event]
@@ -86,6 +108,7 @@ async def run_agent(user_input):
     with st.chat_message('assistant'):
         status_container = st.status('⏳ Processing...', expanded=False)
         text_placeholder = st.empty()
+        image_placeholder = st.empty()
         full_response = ''
 
         try:
@@ -95,7 +118,7 @@ async def run_agent(user_input):
                 user_input,
                 session=session
             )
-
+            # imagegeneration 툴 중 async for(130번째 라인, 강의 코드) 부분
             async for event in stream.stream_events():
                 if event.type == 'raw_response_event':
                     update_status(status_container, event.data.type)
@@ -104,6 +127,19 @@ async def run_agent(user_input):
                         if delta:
                             full_response += delta
                             text_placeholder.markdown(full_response.replace('$', '\\$'))
+                            
+                    elif event.data.type == 'response.image_generation_call.partial_image':
+                        image = base64.b64decode(event.data.partial_image_b64)
+                        image_placeholder.image(image)
+                        
+                    # 위 코드만 있으면 이전 이미지 컨테이너 그대로 쓰면서 이미지가 계속 업데이트됨. 새로 컨테이너 만들어서 매번 새 이미지로 보여주기
+                    elif event.data.type == 'response.completed':
+                        image_placeholder.empty()
+                        text_placeholder.empty()
+                        status_container.update(label = '✅ Done!', state='complete', expanded=False)
+            if full_response:
+                st.markdown(full_response.replace("$", "\\$"))
+                        
         except Exception as e:
             st.error(f"Error during agent execution: {e}")
             st.info("💡 과거 대화 기록과의 충돌일 수 있습니다. 사이드바의 'reset memory' 버튼을 눌러보세요.")
@@ -146,7 +182,6 @@ prompt = st.chat_input(
 )
 
 if prompt:
-    chat_image = None
 
     for file in prompt.files:
         if file.type.startswith('text/'):
