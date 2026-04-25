@@ -210,4 +210,25 @@ session.add_items([
 - **원인**: 에이전트가 이전 대화 맥락을 파악하려면 데이터가 `session.add_items()`를 통해 세션 DB에 먼저 박제되어야 합니다.
 - **해결**: 이미지를 먼저 세션에 저장한 뒤 에이전트를 실행하면, Runner가 세션에서 자동으로 이미지 데이터를 포함하여 API를 호출합니다.
 
+
+---
+
 **한 줄 요약**: SDK에 dict 전체를 넘기면 string으로 인식되어 400, `image_url`이 중첩 dict면 형식 불일치로 400 에러가 발생합니다.
+
+# 2026.4.25 외부 배포 및 도커 환경 최적화
+
+로컬에서 개발한 앱을 외부 유저가 접속 가능하게 설정하는 방법과 도커 빌드 시 주의사항을 정리한다.
+
+### 1) 외부 접속을 위한 Streamlit 보안 설정
+Cloudflare Tunnel이나 프록시 서버를 통해 접속할 경우, Streamlit의 기본 보안 정책(CORS/XSRF)으로 인해 화면이 무한 로딩될 수 있다. 이를 해결하기 위해 `docker-compose.yml`에 다음 환경 변수를 설정해야 한다.
+*   `STREAMLIT_SERVER_ENABLE_CORS=false`: 외부 도메인에서의 접속 허용
+*   `STREAMLIT_SERVER_ENABLE_XSRF=false`: WebSocket 연결 보안 체크 비활성화
+
+### 2) Cloudflare Tunnel을 이용한 실시간 공유 (무료)
+별도의 고정 IP나 도메인 없이도 다음 명령어를 통해 즉시 외부 접속 링크를 생성할 수 있다.
+1.  **도커 실행:** `docker compose up -d` (8000번 포트 기준)
+2.  **터널 생성:** `cloudflared tunnel --url http://localhost:8000`
+3.  **링크 공유:** 실행 시 출력되는 `https://*.trycloudflare.com` 주소를 전달한다. (터미널이 켜져 있는 동안만 유효)
+
+### 3) Docker 빌드 시 의존성 관리
+`uv`를 사용하여 도커 빌드 속도를 최적화할 수 있다. `Dockerfile`에서 `uv pip install`을 사용할 때는 시스템 전역 설치(`--system`) 옵션을 활용하여 컨테이너 환경에 맞게 패키지를 구성한다.
