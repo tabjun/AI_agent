@@ -1,6 +1,14 @@
 import asyncio
 import streamlit as st
-from agents import Agent, Runner, SQLiteSession, WebSearchTool, FileSearchTool, ImageGenerationTool
+from agents import (
+    Agent,
+    Runner,
+    SQLiteSession,
+    WebSearchTool,
+    FileSearchTool,
+    ImageGenerationTool,
+    CodeInterpreterTool,
+)
 import dotenv
 dotenv.load_dotenv()
 import base64
@@ -20,6 +28,7 @@ if 'agent' not in st.session_state:
         2. When a user asks about their own information, files, or documents, YOU MUST USE the 'File Search Tool' to find the answer in the connected vector store.
         3. For current events or general knowledge, use 'Web Search Tool'.
         Always check the files first if the user mentions something that sounds like it's in their personal records.
+        4. Code Interpreter Tool: Use this tool when you need to write and run code to answer the user's question. 
         """,
         tools=[WebSearchTool(),
                FileSearchTool(
@@ -35,6 +44,14 @@ if 'agent' not in st.session_state:
                        # 이미지 그려지면서 중간에 보여주는거
                        'partial_images': 1
                     },
+               ),
+               CodeInterpreterTool(
+                   tool_config={
+                       'type': 'code_interpreter',
+                       'container': {
+                           'type' : 'auto',
+                       },
+                   }
                )
                ]
     )
@@ -84,20 +101,40 @@ async def display_chat_history():
                 with st.chat_message('assistant'):
                     st.image(image)
                     st.markdown('🎨 generated an image.....')
+            elif message_type == 'code_interpreter_call':
+                # 실제 저장 키는 사이드바 로그에서 확인 필요
+                code = message.get('code') or message.get('result', '')
+                with st.chat_message('assistant'):
+                    if code:
+                        st.code(code)
+                    st.markdown('💻 wrote some code.....')
 
 
 def update_status(status_container, event):
     status_messages = {
-        'response.web_search_call.completed': ('✅ Web search complete!', 'complete'),
-        'response.web_search_call.in_progress': ('⏳ Starting web search...', 'running'),
-        'response.web_search_call.searching': ('🔍 Searching the web...', 'running'),
-        'response.file_search_call.completed': ('✅ File search complete!', 'complete'),
-        'response.file_search_call.in_progress': ('📄 Starting file search...', 'running'),
-        'response.file_search_call.searching': ('📄 Searching files...', 'running'),
+        # web_search status
+        'response.web_search_call.in_progress': ('🔍 Starting web search...', 'running'),
+        'response.web_search_call.searching':   ('🔍 Searching the web...', 'running'),
+        'response.web_search_call.completed':   ('✅ Web search complete!', 'complete'),
+        
+        # file_search status
+        'response.file_search_call.in_progress': ('📂 Starting file search...', 'running'),
+        'response.file_search_call.searching':   ('📂 Searching files...', 'running'),
+        'response.file_search_call.completed':   ('✅ File search complete!', 'complete'),
+        
+        # image generation status
+        'response.image_generation_call.in_progress': ('🎨 Preparing...', 'running'),
+        'response.image_generation_call.generating':  ('🖼️ Generating image...', 'running'),
+        'response.image_generation_call.completed':   ('✅ Image generated!', 'complete'),
+        
+        # code interpreter status
+        'response.code_interpreter_call.in_progress':  ('💻 Writing code...', 'running'),
+        'response.code_interpreter_call.interpreting': ('⚙️ Interpreting...', 'running'),
+        'response.code_interpreter_call.code.done':    ('⚙️ Executing...', 'running'),
+        'response.code_interpreter_call.completed':    ('✅ Code execution complete!', 'complete'),
+
+        # 전체 완료
         'response.completed': ('✅ Done', 'complete'),
-        'response.image_generation_call.generating': ('🎨 start generating image...', 'running'),
-        'response.image_generation_call.in_progress': ('🎨 Generating image...', 'running'),
-        'response.image_generation_call.completed': ('✅ Image generation complete!', 'complete'),
     }
     if event in status_messages:
         label, state = status_messages[event]
@@ -107,10 +144,21 @@ def update_status(status_container, event):
 async def run_agent(user_input):
     with st.chat_message('assistant'):
         status_container = st.status('⏳ Processing...', expanded=False)
-        text_placeholder = st.empty()
+        # 이전 코드에는 text_placeholder가 위에 있었는데, 그러면 streamlit 코드 구현 방식에 의해 이미지나 코드가 생성되고, 다시 제일 첫줄에 
+        # 프롬프트 답변이 생성됨. 원하는 결과는 생성 요청한 이미지나 코드가 쭉 나온 후 마지막에 텍스트 답변이 나와야 하기 때문에 순서 변경
         image_placeholder = st.empty()
+        code_placeholder = st.empty()
+        text_placeholder = st.empty()
         full_response = ''
+        code_response = ''
 
+        # image_placeholder.empty(), text_placeholder.empty(), code_placeholder.empty() 이거 3개만 쓰면, 새로고침 후 이전 답변 무조건 비워짐
+        # 사용자가 새로운 메세지 보낼 때만 컨테이너 비워지게 설정 필요
+        # 완성된 컨테이너를  st.session에 캐싱하게 수정
+        st.session_state['code_placeholder'] = code_placeholder
+        st.session_state['image_placeholder'] = image_placeholder
+        st.session_state['text_placeholder'] = text_placeholder
+        
         try:
             # ✅ 변경: 텍스트만 문자열로 전달 (이미지는 이미 세션에 add_items로 저장됨)
             stream = Runner.run_streamed(
@@ -127,19 +175,17 @@ async def run_agent(user_input):
                         if delta:
                             full_response += delta
                             text_placeholder.markdown(full_response.replace('$', '\\$'))
+                    
+                    # code interpreter의 delta는 코드를 점진적으로 보여주는 용도. 전체 코드는 completed 이벤트의 result에 저장되어 있음. delta는 그때그때 업데이트
+                    # 이쁘게 보여주기 위해 꾸며주기
+                    elif event.data.type == 'response.code_interpreter_call.code.delta':
+                        code_response += event.data.delta
+                        code_placeholder.code(code_response)
                             
                     elif event.data.type == 'response.image_generation_call.partial_image':
                         image = base64.b64decode(event.data.partial_image_b64)
                         image_placeholder.image(image)
-                        
-                    # 위 코드만 있으면 이전 이미지 컨테이너 그대로 쓰면서 이미지가 계속 업데이트됨. 새로 컨테이너 만들어서 매번 새 이미지로 보여주기
-                    elif event.data.type == 'response.completed':
-                        image_placeholder.empty()
-                        text_placeholder.empty()
-                        status_container.update(label = '✅ Done!', state='complete', expanded=False)
-            if full_response:
-                st.markdown(full_response.replace("$", "\\$"))
-                        
+                                                                      
         except Exception as e:
             st.error(f"Error during agent execution: {e}")
             st.info("💡 과거 대화 기록과의 충돌일 수 있습니다. 사이드바의 'reset memory' 버튼을 눌러보세요.")
@@ -182,6 +228,12 @@ prompt = st.chat_input(
 )
 
 if prompt:
+    if 'code_placeholder' in st.session_state:
+        st.session_state['code_placeholder'].empty()
+    if 'image_placeholder' in st.session_state:
+        st.session_state['image_placeholder'].empty()
+    if 'text_placeholder' in st.session_state:
+        st.session_state['text_placeholder'].empty()
 
     for file in prompt.files:
         if file.type.startswith('text/'):
