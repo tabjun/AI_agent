@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 import streamlit as st
 from agents import (
     Agent,
@@ -8,55 +9,93 @@ from agents import (
     FileSearchTool,
     ImageGenerationTool,
     CodeInterpreterTool,
+    HostedMCPTool
 )
 import dotenv
 dotenv.load_dotenv()
 import base64
 from openai import OpenAI
 
+from agents.mcp import MCPServerStdio
+
 client = OpenAI()
 
 VECTOR_STORE_ID = 'vs_69ea1ac59b5c8191a0d32df71038261e'
 
-# 에이전트 초기화
-if 'agent' not in st.session_state:
-    st.session_state['agent'] = Agent(
-        name='ChatGpt Clone',
-        instructions="""
-        You are a helpful assistant that can process both text, images, and documents.
-        1. When an image is provided, analyze it carefully.
-        2. When a user asks about their own information, files, or documents, YOU MUST USE the 'File Search Tool' to find the answer in the connected vector store.
-        3. For current events or general knowledge, use 'Web Search Tool'.
-        Always check the files first if the user mentions something that sounds like it's in their personal records.
-        4. Code Interpreter Tool: Use this tool when you need to write and run code to answer the user's question. 
-        """,
-        tools=[WebSearchTool(),
-               FileSearchTool(
-                   vector_store_ids=[VECTOR_STORE_ID],
-                   max_num_results=5
-               ),
-               ImageGenerationTool(
-                   tool_config={
-                       'type': 'image_generation',
-                       'quality': 'auto',
-                       'output_format': 'jpeg',
-                       'moderation': 'low',
-                       # 이미지 그려지면서 중간에 보여주는거
-                       'partial_images': 1
-                    },
-               ),
-               CodeInterpreterTool(
-                   tool_config={
-                       'type': 'code_interpreter',
-                       'container': {
-                           'type' : 'auto',
-                       },
-                   }
-               )
-               ]
+@asynccontextmanager
+async def build_agent():
+    # MCP 서버는 에이전트가 실제로 동작하는 동안 계속 살아 있어야 한다.
+    # 그래서 전역으로 캐싱하지 않고, agent를 사용할 때마다 서버와 같이 열고 닫는다.
+    yfinance_server = MCPServerStdio(
+        params={
+            'command': 'uvx',
+            'args': ['mcp-yahoo-finance'],
+        },
+        cache_tools_list=True,
     )
 
-agent = st.session_state['agent']
+    timezone_server = MCPServerStdio(
+        params={
+            'command': 'uvx',
+            'args': ['mcp-server-time', '--local-timezone=Asia/Seoul'],
+        }
+    )
+
+    async with yfinance_server, timezone_server:
+        yield Agent(
+            mcp_servers=[yfinance_server, timezone_server],
+            name='ChatGpt Clone',
+            instructions="""
+            You are a helpful assistant that can process both text, images, and documents.
+            1. When an image is provided, analyze it carefully.
+            2. When a user asks about their own information, files, or documents, YOU MUST USE the 'File Search Tool' to find the answer in the connected vector store.
+            3. For current events or general knowledge, use 'Web Search Tool'.
+            Always check the files first if the user mentions something that sounds like it's in their personal records.
+            4. Code Interpreter Tool: Use this tool when you need to write and run code to answer the user's question.
+
+            With additional rules for financial queries:
+            For any stock price, ticker, financial metric, or market data query,
+            you MUST use the yahoo-finance MCP tool first.
+            Only fall back to web_search if yahoo-finance returns an error or no data.
+            Do not use web_search for ticker-based queries under any circumstances.
+            """,
+            tools=[
+                WebSearchTool(),
+                FileSearchTool(
+                    vector_store_ids=[VECTOR_STORE_ID],
+                    max_num_results=5,
+                ),
+                ImageGenerationTool(
+                    tool_config={
+                        'type': 'image_generation',
+                        'quality': 'auto',
+                        'output_format': 'jpeg',
+                        'moderation': 'low',
+                        # 중간 생성 결과를 화면에 보여주기 위해 1장씩 전달한다.
+                        'partial_images': 1,
+                    },
+                ),
+                CodeInterpreterTool(
+                    tool_config={
+                        'type': 'code_interpreter',
+                        'container': {
+                            'type': 'auto',
+                            'file_ids': [],
+                        },
+                    }
+                ),
+                HostedMCPTool(
+                    tool_config={
+                        'server_url': 'https://mcp.context7.com/mcp',
+                        'type': 'mcp',
+                        # server_label은 OpenAI 검증 규칙상 공백 없이 영문자로 시작해야 한다.
+                        'server_label': 'Context7',
+                        'server_description': 'Use this to get the docs from software projects.',
+                        'require_approval': 'never',
+                    }
+                ),
+            ],
+        )
 
 if 'session' not in st.session_state:
     st.session_state['session'] = SQLiteSession('chat-history', 'chat-gpt-clone-memory.db')
@@ -67,7 +106,7 @@ session = st.session_state['session']
 async def display_chat_history():
     messages = await session.get_items()
     for message in messages:
-        # ✅ dict가 아니면 스킵
+        # 세션에 문자열이나 다른 타입이 섞일 수 있어서 dict만 렌더링한다.
         if not isinstance(message, dict):
             continue
 
@@ -87,7 +126,7 @@ async def display_chat_history():
                     st.markdown(message['content'].replace('$', '\\$'))
 
         if 'type' in message:
-            # 생성한 이미지, 새로고침 후에도 저장돼서 계속 노출되게
+            # raw history에 저장된 tool call 로그를 재렌더링해서 새로고침 후에도 보이게 한다.
             message_type = message['type']
             if message_type == 'web_search_call':
                 with st.chat_message('assistant'):
@@ -96,18 +135,24 @@ async def display_chat_history():
                 with st.chat_message('assistant'):
                     st.markdown('📄 searched the files.....')
             elif message_type == 'image_generation_call':
-                # 이미지 생성 후 로그보면 result에 base64로 인코딩된 이미지 데이터가 저장되어 있음. 이걸 디코딩해서 보여주기
+                # 이미지 생성 결과는 result에 base64로 저장된다.
                 image = base64.b64decode(message['result'])
                 with st.chat_message('assistant'):
                     st.image(image)
                     st.markdown('🎨 generated an image.....')
             elif message_type == 'code_interpreter_call':
-                # 실제 저장 키는 사이드바 로그에서 확인 필요
+                # code/interpreter 로그는 버전에 따라 code 또는 result에 들어갈 수 있다.
                 code = message.get('code') or message.get('result', '')
                 with st.chat_message('assistant'):
                     if code:
                         st.code(code)
                     st.markdown('💻 wrote some code.....')
+            elif message_type == 'mcp_list_tools':
+                with st.chat_message('assistant'):
+                    st.markdown(f'⚒️ Listed {message["server_label"]} tools.....')
+            elif message_type == 'mcp_call':
+                with st.chat_message('assistant'):
+                    st.markdown(f"Called {message['server_label']}... {message['name']} with args {message['arguments']}")
 
 
 def update_status(status_container, event):
@@ -132,6 +177,14 @@ def update_status(status_container, event):
         'response.code_interpreter_call.interpreting': ('⚙️ Interpreting...', 'running'),
         'response.code_interpreter_call.code.done':    ('⚙️ Executing...', 'running'),
         'response.code_interpreter_call.completed':    ('✅ Code execution complete!', 'complete'),
+        
+        # Mcp tool status
+         "response.mcp_call.completed": ("⚒️ Called MCP tool", "complete",),
+        "response.mcp_call.failed": ("⚒️ Error calling MCP tool", "complete",),
+        "response.mcp_call.in_progress": ("⚒️ Calling MCP tool...", "running",),
+        "response.mcp_list_tools.completed": ("⚒️ Listed MCP tools", "complete",),
+        "response.mcp_list_tools.failed": ("⚒️ Error listing MCP tools", "complete",),
+        "response.mcp_list_tools.in_progress": ("⚒️ Listing MCP tools", "running",),
 
         # 전체 완료
         'response.completed': ('✅ Done', 'complete'),
@@ -160,31 +213,31 @@ async def run_agent(user_input):
         st.session_state['text_placeholder'] = text_placeholder
         
         try:
-            # ✅ 변경: 텍스트만 문자열로 전달 (이미지는 이미 세션에 add_items로 저장됨)
-            stream = Runner.run_streamed(
-                agent,
-                user_input,
-                session=session
-            )
-            # imagegeneration 툴 중 async for(130번째 라인, 강의 코드) 부분
-            async for event in stream.stream_events():
-                if event.type == 'raw_response_event':
-                    update_status(status_container, event.data.type)
-                    if event.data.type == 'response.output_text.delta':
-                        delta = getattr(event.data, 'delta', None)
-                        if delta:
-                            full_response += delta
-                            text_placeholder.markdown(full_response.replace('$', '\\$'))
-                    
-                    # code interpreter의 delta는 코드를 점진적으로 보여주는 용도. 전체 코드는 completed 이벤트의 result에 저장되어 있음. delta는 그때그때 업데이트
-                    # 이쁘게 보여주기 위해 꾸며주기
-                    elif event.data.type == 'response.code_interpreter_call.code.delta':
-                        code_response += event.data.delta
-                        code_placeholder.code(code_response)
-                            
-                    elif event.data.type == 'response.image_generation_call.partial_image':
-                        image = base64.b64decode(event.data.partial_image_b64)
-                        image_placeholder.image(image)
+            # MCP 서버는 agent와 같은 context 안에서 살아 있어야 하므로 여기서 함께 생성한다.
+            async with build_agent() as agent:
+                stream = Runner.run_streamed(
+                    agent,
+                    user_input,
+                    session=session,
+                )
+                # streamed 이벤트를 따라가며 텍스트, 코드, 이미지 결과를 각각 다른 컨테이너에 넣는다.
+                async for event in stream.stream_events():
+                    if event.type == 'raw_response_event':
+                        update_status(status_container, event.data.type)
+                        if event.data.type == 'response.output_text.delta':
+                            delta = getattr(event.data, 'delta', None)
+                            if delta:
+                                full_response += delta
+                                text_placeholder.markdown(full_response.replace('$', '\\$'))
+
+                        # 코드 델타는 실행 중인 코드를 점진적으로 보여주기 위한 이벤트다.
+                        elif event.data.type == 'response.code_interpreter_call.code.delta':
+                            code_response += event.data.delta
+                            code_placeholder.code(code_response)
+
+                        elif event.data.type == 'response.image_generation_call.partial_image':
+                            image = base64.b64decode(event.data.partial_image_b64)
+                            image_placeholder.image(image)
                                                                       
         except Exception as e:
             st.error(f"Error during agent execution: {e}")
@@ -241,9 +294,11 @@ if prompt:
                 with st.status(label='⏳ Processing text file...', state='running') as status:
                     uploaded_openai_file = client.files.create(
                         file=(file.name, file.getvalue()),
-                        purpose='assistants'
+                        # 현재 SDK에서는 user_data 목적이 파일 업로드/벡터 스토어 사용에 더 자연스럽다.
+                        purpose='user_data'
                     )
-                    client.beta.vector_stores.files.create(
+                    # 최신 SDK에서는 vector store 파일 등록이 client.vector_stores 아래에 있다.
+                    client.vector_stores.files.create(
                         vector_store_id=VECTOR_STORE_ID,
                         file_id=uploaded_openai_file.id
                     )
@@ -269,7 +324,8 @@ if prompt:
                     ])
                 )
                 status.update(label='✅ Image uploaded', state='complete')
-            with st.chat_message('human'):
+            # user role로 보여줘야 채팅 히스토리와 입력 메시지 역할이 일관된다.
+            with st.chat_message('user'):
                 st.image(data_uri)
 
     if prompt.text:
