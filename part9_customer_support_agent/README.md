@@ -24,7 +24,7 @@
 ## 전체 흐름
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[🧑 사용자 요청] --> B[🛡️ 입력 가드레일]
     B -->|통과| C[🧠 분류 에이전트]
     B -->|차단| X[⛔ 도움 불가]
