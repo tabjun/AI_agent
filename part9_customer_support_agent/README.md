@@ -60,6 +60,87 @@ audio_input = st.audio_input("Record your message")
 5. 워크플로우 내부에서 가드레일과 분류 로직이 동작합니다.
 6. 최종적으로 `result.stream()`을 통해 오디오 응답이 재생됩니다.
 
+## Context 란 무엇인가
+
+이 강의에서 가장 중요한 개념 중 하나가 `context`입니다.
+
+`context`는 한마디로 말하면, **에이전트가 답을 만들거나 툴을 실행할 때 참고하는 실행 시점의 추가 데이터**입니다.
+
+여기서 중요한 점은 `context`가 그냥 전역 변수처럼 고정된 값이 아니라는 것입니다.
+`context`는 **요청 1번을 처리하는 동안만 유효한 런타임 데이터**처럼 생각하면 이해하기 쉽습니다.
+
+예를 들어 이 프로젝트에서는 `UserAccountContext`를 통해:
+
+- 누가 요청했는지
+- 어떤 계정 등급인지
+- 어떤 사용자 문맥을 참고해야 하는지
+
+를 같이 넘겨줍니다.
+
+즉, 에이전트는 "무슨 질문이 들어왔는지"만 보는 것이 아니라, **"누가, 어떤 상태로, 어떤 요청을 했는지"**까지 함께 고려할 수 있습니다.
+
+## Context 가 중요한 이유
+
+`context`를 쓰면 에이전트 설계가 훨씬 깔끔해집니다.
+
+- 전역 변수에 모든 사용자 정보를 넣지 않아도 됩니다.
+- 툴이 필요한 최소 정보만 받을 수 있습니다.
+- 같은 agent라도 실행할 때마다 다른 사용자 문맥을 주입할 수 있습니다.
+- 테스트할 때도 각 요청별 조건을 쉽게 바꿔볼 수 있습니다.
+
+이게 중요한 이유는, 실제 에이전트 시스템은 보통 **같은 로직 + 다른 사용자 문맥** 조합으로 동작하기 때문입니다.
+
+## Context 는 어디에 붙나
+
+이 코드에서는 `Runner.run_streamed(...)`에 `context=user_account_ctx`를 넣습니다.
+
+즉 흐름은 이렇게 이해하면 됩니다.
+
+1. 사용자가 메시지를 보낸다.
+2. `Runner`가 실행된다.
+3. 이 실행 1회에만 쓸 `context`가 함께 들어간다.
+4. `Agent`와 `function_tool`이 같은 context를 바라본다.
+5. 필요한 툴은 context에서 자기에게 필요한 정보만 꺼내 쓴다.
+
+이 구조 덕분에, 툴은 전체 대화나 전체 사용자 정보를 다 알 필요가 없습니다.
+**필요한 최소 정보만 context로 주입받는 방식**이 됩니다.
+
+## Agent, Runner, Tool 에서의 역할 차이
+
+### Runner
+
+`Runner`는 실행 담당입니다.
+
+- 실제 요청을 돌린다
+- session과 context를 함께 묶는다
+- streamed response를 돌려준다
+
+즉, `Runner`는 "이번 요청을 어떤 환경에서 실행할지"를 담당합니다.
+
+### Agent
+
+`Agent`는 사고와 라우팅의 중심입니다.
+
+- 어떤 규칙으로 답할지
+- 어떤 툴을 쓸지
+- 어떤 정보를 참고할지
+
+를 결정합니다.
+
+### Tool
+
+`Tool`은 에이전트가 외부 작업을 할 때 쓰는 도구입니다.
+
+이때 tool은 `context`를 활용해서:
+
+- 현재 사용자 등급 확인
+- 계정 상태 조회
+- 사용자별 문맥 분기
+
+같은 일을 할 수 있습니다.
+
+즉, tool은 "누구를 위한 요청인지"를 context로 알고 동작할 수 있습니다.
+
 ## main.py 기준 핵심 포인트
 
 ### 1. 입력 가드레일
@@ -101,6 +182,9 @@ audio_input = st.audio_input("Record your message")
 
 즉, 에이전트는 "무슨 말이 왔는지"만 보는 게 아니라, "누가 말했는지"도 함께 참고합니다.
 
+`main.py`에서 `context=user_account_ctx`로 주입한 값이 바로 이 역할을 합니다.
+그리고 `get_user_tier()` 같은 tool은 `RunContextWrapper[UserAccountContext]`를 통해 그 값에 접근합니다.
+
 ### 4. 출력 가드레일
 
 분류 에이전트가 만든 최종 응답도 바로 사용자에게 보여주지 않습니다.
@@ -122,6 +206,8 @@ audio_input = st.audio_input("Record your message")
 - `[main.py](./main.py)`에서 `CustomWorkflow(context=user_account_ctx)`를 생성합니다.
 - `[main.py](./main.py)`에서 `VoicePipeline(workflow=workflow)`로 실제 실행 파이프라인을 구성합니다.
 - `[main.py](./main.py)`에서 `st.status()`와 `result.stream()`으로 진행 상태와 음성 스트리밍을 보여줍니다.
+- `[main.py](./main.py)`의 `Runner.run_streamed(..., context=user_account_ctx)`가 context 주입의 핵심 예시입니다.
+- `[main.py](./main.py)`의 `get_user_tier()`가 tool이 context를 어떻게 읽는지 보여주는 가장 작은 예시입니다.
 
 ## 왜 이 구조가 중요한가
 
@@ -142,6 +228,9 @@ audio_input = st.audio_input("Record your message")
 - 분류 에이전트는 "어느 경로로 처리할지"를 정하는 라우터
 - 사용자 계정 문맥은 "누구의 요청인지"를 보강하는 정보
 - 출력 가드레일은 "이 답을 내보내도 되는지"를 보는 2차 방어선
+
+그리고 `context`는 이 전체 흐름을 사용자의 실제 상태에 맞게 바꿔주는 연결 고리입니다.
+같은 가드레일과 같은 agent라도, context가 달라지면 최종 판단과 툴 호출 방식이 달라질 수 있습니다.
 
 ## 한 줄 요약
 
