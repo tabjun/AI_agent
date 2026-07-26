@@ -7,3 +7,10 @@ class UserAccountContext(BaseModel):
     name: str
     tier: str = "basic" # premium, enterprise 등 등급에 따라 차등 혜택 받을 수 있게 구성
     
+
+class InputGuardRailOutput(BaseModel):
+    
+    # 정해진 주제에서 벗어난 질문인지 여부 판단
+    is_off_topic: bool
+    # 선정 이유
+    reason: str
