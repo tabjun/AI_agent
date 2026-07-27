@@ -4,9 +4,8 @@ dotenv.load_dotenv()
 from openai import OpenAI
 import asyncio
 import streamlit as st
-from agents import Runner, SQLiteSession, InputGuardrailTripwireTriggered
+from agents import Runner, SQLiteSession, InputGuardrailTripwireTriggered, function_tool, RunContextWrapper
 from models import UserAccountContext
-from my_agents.triage_agent import triage_agent
 
 
 client = OpenAI()
@@ -54,7 +53,7 @@ async def run_agent(message):
             # context는 이 실행 1회에만 붙는 런타임 데이터다.
             # 같은 agent라도 어떤 context를 넣느냐에 따라 툴과 응답이 달라질 수 있다.
             stream = Runner.run_streamed(
-                triage_agent,
+                agent,
                 message,
                 session=session,
                 # Runner에 context를 넣으면, Agent와 function_tool이 같은 사용자 문맥을 공유한다.

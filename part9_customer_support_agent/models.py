@@ -14,3 +14,14 @@ class InputGuardRailOutput(BaseModel):
     is_off_topic: bool
     # 선정 이유
     reason: str
+    
+
+# triage_agent.py의 handle_handoff/make_handoff가 참조하는 타입명은 HandoffData(소문자 off)다.
+# 클래스명이 HandOffData(대문자 O)로 어긋나 있으면 import 자체가 NameError로 깨진다.
+class HandoffData(BaseModel):
+    # handoff 발생 시, 어떤 에이전트에게 handoff 되었는지, 어떤 이유로 handoff 되었는지 등
+    # 에이전트 간 handoff를 기록할 수 있는 데이터 모델 정의
+    to_agent_name: str
+    issue_type: str
+    issue_description: str
+    reason: str

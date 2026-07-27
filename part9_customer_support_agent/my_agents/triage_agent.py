@@ -4,8 +4,24 @@
  2. 질문을 살펴보고 주제와 관련 없거나, 무례함 등 에티켓에 어긋나는 질문은 거절하고, 관련 있는 질문은 적절한 에이전트에게 전달
  '''
 
-from agents import Agent, RunContextWrapper, input_guardrail, Runner, GuardrailFunctionOutput
-from models import UserAccountContext, InputGuardRailOutput
+from agents import (
+    Agent,
+    RunContextWrapper,
+    input_guardrail,
+    Runner,
+    GuardrailFunctionOutput,
+    handoff,
+    )
+from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
+from agents.extensions import handoff_filters
+from models import UserAccountContext, InputGuardRailOutput, HandoffData
+from my_agents.account_agent import account_agent
+from my_agents.technical_agent import technical_agent
+from my_agents.order_agent import order_agent
+from my_agents.billing_agent import billing_agent
+
+import streamlit as st
+
 
 # 안전 설정으로 AI 가 정형화된 범위 내에서만 동작하도록 제한하는 에이전트 정의
 input_guardrail_agent = Agent(
@@ -49,6 +65,8 @@ def dynamic_triage_agent_instructinos(
     
     # 지금 강의에서는 UserAccountContext에 입력되는 프롬프트를 활용해서 지침을 내려주는 예시를 보여주기 위해, agent.name을 활용하지 않고 작성함.
     return f"""
+
+    {RECOMMENDED_PROMPT_PREFIX}
     You are a customer support agent. You ONLY help customers with their questions about their User Account, Billing, Orders, or Technical Support.
     You call customers by their name.
     
@@ -101,6 +119,33 @@ def dynamic_triage_agent_instructinos(
     - Unclear issues: Ask 1-2 clarifying questions before routing
     """
 
+# handoff가 발생할 때마다 실행되는 함수 만들기 
+def handle_handoff(
+    # 이렇게 정의하면 ~~ userID에 의해 ~ handoff가 발생했음 파악 가능
+    wrapper: RunContextWrapper[UserAccountContext],
+    input_data: HandoffData, # handoff 발생 시, 어떤 에이전트에게 handoff 되었는지, 어떤 이유로 handoff 되었는지 등 에이전트 간 handoff를 기록할 수 있는 데이터 모델 정의
+):
+    # 화면 내 사이드바로 구현
+    with st.sidebar:
+        st.write(f'''
+                 Handing off to {input_data.to_agent_name}
+                 Reason: {input_data.reason}
+                 Issue Type: {input_data.issue_type}
+                 Issue Description: {input_data.issue_description}
+
+                 ''')
+
+def make_handoff(agent):
+    
+    return handoff(
+            agent=agent,
+            on_handoff = handle_handoff,
+            input_type = HandoffData,
+            # handoff 발생 시, 어떤 에이전트에게 handoff 되었는지, 어떤 이유로 handoff 되었는지 등 에이전트 간 handoff를 기록할 수 있는 데이터 모델 정의
+            input_filter = handoff_filters.remove_all_tools,
+        
+    )
+
 
 # 현재 설치된 openai-agents SDK 버전에서는 Agent의 필드명이 input_guardrails(복수형)이다.
 # 강의에서 쓰던 input_guardrail(단수형)로 넘기면 dataclass에 없는 필드라 조용히 무시되고,
@@ -108,5 +153,21 @@ def dynamic_triage_agent_instructinos(
 triage_agent = Agent(
     name="Triage Agent",
     instructions = dynamic_triage_agent_instructinos,
-    input_guardrails = [off_topic_guardrail]
+    input_guardrails = [off_topic_guardrail],
+    # 각 에이전트에게 명령 하달, handoffs
+    # 에이전트를 묶어서 tool처럼 사용 가능하게
+    
+    handoffs = [
+        make_handoff(technical_agent),
+        make_handoff(billing_agent),
+        make_handoff(order_agent),
+        make_handoff(account_agent),
+                ],
+    
+    # 이 방식은 특정 손님에게 전담으로 에이전트 연결해줄때 유용함
+    # tools = [technical_agent.as_tool(
+    #     tool_name= 'Technical Support Agent',
+    #     tool_description = 'Use This when the user needs tech support'
+    # )],
+
 )
