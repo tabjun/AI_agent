@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class UserAccountContext(BaseModel):
     # context는 에이전트 실행 시점에 주입되는 사용자별 런타임 데이터다.
@@ -6,7 +7,10 @@ class UserAccountContext(BaseModel):
     customer_id: int
     name: str
     tier: str = "basic" # premium, enterprise 등 등급에 따라 차등 혜택 받을 수 있게 구성
-    
+    # triage_agent.py의 dynamic_triage_agent_instructinos가 wrapper.context.email을 참조한다.
+    # 강의 원본 models.py 기준으로 Optional[str] = None으로 추가.
+    email: Optional[str] = None
+
 
 class InputGuardRailOutput(BaseModel):
     
