@@ -4,7 +4,8 @@ dotenv.load_dotenv()
 from openai import OpenAI
 import asyncio
 import streamlit as st
-from agents import Runner, SQLiteSession, InputGuardrailTripwireTriggered, function_tool, RunContextWrapper
+from agents import (Runner, SQLiteSession, InputGuardrailTripwireTriggered,
+function_tool, RunContextWrapper, OutputGuardrailTripwireTriggered)
 from models import UserAccountContext
 from my_agents.triage_agent import triage_agent
 
@@ -128,6 +129,9 @@ async def run_agent(message):
         # 가드레일(triage_agent)에서 off-topic으로 판단되면, InputGuardrailTripwireTriggered 예외 발생. 에러 메세지 출력대신 이쁘게 가다듬기
         except InputGuardrailTripwireTriggered:
             st.write("I can't help you with that")
+            
+        except OutputGuardrailTripwireTriggered:
+            st.write("can't answer your question because it contains information outside my domain. Please ask a different question.")
 
 message = st.chat_input(
     "Write a message for your assistant",

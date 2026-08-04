@@ -54,7 +54,7 @@ async def off_topic_guardrail(
 
 # 동적으로 triage_agent 지침 내려주는 함수
 # 동일 함수를 여러 에이전트에 활용 가능하기 때문에 여기에도 에이전트 정의
-def dynamic_triage_agent_instructinos(
+def dynamic_triage_agent_instructions(
     wrapper: RunContextWrapper[UserAccountContext],
     agent: Agent[UserAccountContext],
     ):
@@ -152,7 +152,7 @@ def make_handoff(agent):
 # off_topic_guardrail이 triage_agent에 아예 연결되지 않아 가드레일이 동작하지 않는다.
 triage_agent = Agent(
     name="Triage Agent",
-    instructions = dynamic_triage_agent_instructinos,
+    instructions = dynamic_triage_agent_instructions,
     input_guardrails = [off_topic_guardrail],
     # 각 에이전트에게 명령 하달, handoffs
     # 에이전트를 묶어서 tool처럼 사용 가능하게
